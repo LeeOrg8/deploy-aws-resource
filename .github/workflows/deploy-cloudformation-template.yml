@@ -65,7 +65,7 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: ${{ inputs.db_instance_identifier }}
-          template: aws-cloud-formation-template.yaml
+          template: ./aws-cloud-formation-template.yaml
           parameter-overrides: >-
             DBInstanceIdentifier=${{ inputs.db_instance_identifier }},
             DBMasterUsername=${{ inputs.db_master_username }},
