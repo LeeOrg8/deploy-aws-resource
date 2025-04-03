@@ -49,7 +49,7 @@ Parameters:
   DBInstanceClass:
     Description: DB instance class for the RDS instance
     Type: String
-    Default: db.t2.micro
+    Default: db.t3.micro
     AllowedValues:
       - db.t2.micro
       - db.t3.micro
