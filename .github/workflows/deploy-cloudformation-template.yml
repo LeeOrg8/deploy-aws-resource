@@ -1,0 +1,99 @@
+name: Deploy CloudFormation - RDS Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      db_instance_identifier:
+        required: true
+        type: string
+        description: db_instance_identifier
+      db_master_username:
+        required: true
+        type: string
+        description: db_master_username
+      db_master_password:
+        required: true
+        type: string
+        description: db_master_password
+      db_engine:
+        required: true
+        type: string
+        description: db_engine
+      db_instance_class:
+        required: true
+        type: string
+        description: db_instance_class
+      allocated_storage:
+        required: true
+        type: number
+        description: allocated_storage
+      port_context:
+        required: true
+        description: Details about the action and general port_context (blueprint, run id, etc...)
+        type: string
+
+jobs:
+  deploy-cloudformation-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Configure AWS Credentials 🔒
+        id: aws-credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Decrypt aes256-gcm String
+        id: decrypt_password
+        run: |
+          pip install --upgrade pip
+          pip install pycryptodome
+          python decrypt_password.py
+        env:
+          PORT_CLIENT_SECRET: ${{ secrets.PORT_CLIENT_SECRET }}
+          PASSWORD: ${{ inputs.db_master_password }}
+
+      - name: Deploy to AWS CloudFormation
+        uses: aws-actions/aws-cloudformation-github-deploy@v1
+        with:
+          name: ${{ inputs.db_instance_identifier }}
+          template: aws-cloud-formation-template.yaml
+          parameter-overrides: >-
+            DBInstanceIdentifier=${{ inputs.db_instance_identifier }},
+            DBMasterUsername=${{ inputs.db_master_username }},
+            DBMasterPassword=${{ steps.decrypt_password.outputs.decrypted_value }},
+            DBEngine=${{ inputs.db_engine }},
+            DBInstanceClass=${{ inputs.db_instance_class}},
+            AllocatedStorage=${{ inputs.allocated_storage }}
+
+      - name: UPSERT RDS Instance Entity in Port
+        uses: port-labs/port-github-action@v1
+        with:
+          identifier: ${{ inputs.db_instance_identifier }}
+          title: ${{ inputs.db_instance_identifier }}
+          team: '[]'
+          icon: RDS
+          blueprint: rds_instance
+          properties: |-
+            {
+              "db_instance_identifier": "${{ inputs.db_instance_identifier }}",
+              "db_master_username": "${{ inputs.db_master_username }}",
+              "db_master_password": "${{ inputs.db_master_password }}",
+              "db_engine": "${{ inputs.db_engine }}",
+              "db_instance_class": "${{ inputs.db_instance_class }}",
+              "allocated_storage": ${{ inputs.allocated_storage }}
+            }
+          relations: '{}'
+          clientId: ${{ secrets.PORT_CLIENT_ID }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: UPSERT
+          runId: ${{fromJson(inputs.port_context).runId}}
