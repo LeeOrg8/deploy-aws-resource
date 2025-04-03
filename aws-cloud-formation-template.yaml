@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation Template for an Amazon RDS Instance
+
+Parameters:
+  DBInstanceIdentifier:
+    Description: Identifier for the RDS instance
+    Type: String
+    MinLength: 1
+    MaxLength: 63
+    Default: myrdsinstance
+    ConstraintDescription: The DB instance identifier must be between 1 and 63 characters.
+
+  DBMasterUsername:
+    Description: Master username for the RDS instance
+    Type: String
+    MinLength: 1
+    MaxLength: 63
+    Default: admin
+    ConstraintDescription: The master username must be between 1 and 63 characters.
+
+  DBMasterPassword:
+    Description: Master password for the RDS instance
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    Default: MySecurePassword
+    ConstraintDescription: The master password must be between 8 and 41 characters.
+
+  DBEngine:
+    Description: Database engine for the RDS instance
+    Type: String
+    Default: mysql
+    AllowedValues:
+      - mysql
+      - postgres
+      - sqlserver
+      - oracle
+    ConstraintDescription: Choose a valid database engine.
+
+  AllocatedStorage:
+    Description: Allocated storage for the RDS instance (in GB)
+    Type: Number
+    Default: 20
+    MinValue: 5
+    MaxValue: 6144
+    ConstraintDescription: Allocated storage must be between 5 and 6144 GB.
+
+  DBInstanceClass:
+    Description: DB instance class for the RDS instance
+    Type: String
+    Default: db.t2.micro
+    AllowedValues:
+      - db.t2.micro
+      - db.t2.small
+      - db.m4.large
+      # Add more instance types as needed
+    ConstraintDescription: Choose a valid DB instance class.
+
+Resources:
+  RDSInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      AllocatedStorage: !Ref AllocatedStorage
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: !Ref DBEngine
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterPassword
+
+Outputs:
+  RDSInstanceEndpoint:
+    Description: Endpoint for the created RDS instance
+    Value: !GetAtt RDSInstance.Endpoint.Address
